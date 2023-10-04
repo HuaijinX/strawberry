@@ -1,3 +1,3 @@
-# MSSP GitHub Exercise
+# October 4 coding excercise
 
 My group members are:
