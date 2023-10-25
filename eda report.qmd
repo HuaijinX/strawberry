@@ -53,6 +53,7 @@ strawberry_census$Value <- vals
 val2<-strawberry_census$`CV (%)`
 val2<-gsub("(D)",NA,val2)
 val2<-gsub("(H)",NA,val2)
+val2<-as.numeric(val2)
 strawberry_census$`CV (%)` <- val2
 strawberry_census <- strawberry_census |>
   separate_wider_delim(  cols = Metric,
@@ -101,18 +102,104 @@ glimpse(strawberry_survey)
 
 ## EDA
 
-We first do some EDA for CENSUS part:
+### We first do some EDA for CENSUS part:
+
+#### 1.distribution for the log(Value).
+
+Because there are lots of NA values, we ignore them. And the distribution is large so we use log.
 
 ```{r}
 #| warning: false
 #| message: false
 #| #| echo: false
+library(ggplot2)
+data_to_plot <- strawberry_census[!is.na(strawberry_census$Value), ]
 
-ggplot(strawberry_census, aes(x = State, y = `CV (%)`, fill = Type)) + 
-  geom_boxplot() + 
+ggplot(data_to_plot, aes(x = log1p(Value))) + 
+  geom_histogram() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  labs(title = "Distribution of CV (%) by State")
-
+  labs(title = "Distribution of Value")
 
 
 ```
+
+#### 2.Organic Operations With Sales by State (strawberry_census)
+
+```{r}
+#| echo: false
+ggplot(data_to_plot, aes(x = State, y = log1p(Value))) + 
+  geom_bar(stat="identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Organic Operations With Sales by State", y = "Number of Operations")
+```
+
+-   **Analysis**: This bar chart would show the number of organic operations with sales for each state. States with taller bars have a higher number of operations. Observing which states have the highest and lowest counts can give insights into where organic strawberry farming is most prevalent and where it might be emerging or less common. The highest is California which means California has most prevalent strawberry farming. And for states like Alaska, Kansas, and Nevada definitely less common for strawberry farming.
+
+#### 3.Distribution of CV (%) by State (strawberry_census) for those with Fresh Market
+
+```{r}
+#| warning: false
+#| message: false
+#| #| echo: false
+library(ggplot2)
+
+# Filter data for rows with Type = "Fresh Market"
+data_to_plot2 <- strawberry_census[strawberry_census$Type == " FRESH MARKET", ]
+
+ggplot(data_to_plot2, aes(x = State, y = `CV (%)`, fill = Type)) + 
+  geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Distribution of CV (%) by State for Fresh Market Type")
+
+```
+
+-   **Analysis**: CV (Coefficient of Variation) measures the relative variability. A state with a higher CV would have a higher relative variability in its data. If the CV is too high, it might indicate inconsistencies or potential issues in the data collection process, like Illinois. Conversely, a very low CV across many states might suggest that the data is too uniform and could be worth verifying for accuracy, like Rhode Island.
+
+### The there are some EDA for Survey Part:
+
+#### 1.distribution for Type of product condition.
+
+```{r}
+#| warning: false
+#| message: false
+#| #| echo: false
+ggplot(strawberry_survey, aes(x = State, fill = Type)) + 
+  geom_bar(position = "dodge") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Distribution of type of product condition by states", y = "Frequency")
+
+```
+
+As you can see in the plot that most product in California and Florida are going for application but much less data recorded for price received.
+
+#### 2.Organic Operations With Sales by State (strawberry_survey)
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+ggplot(strawberry_survey, aes(x = State, y = log1p(Value))) + 
+  geom_bar(stat="identity") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Organic Operations With Sales by State", y = "Number of Operations")
+```
+
+#### 3. Scatter Plot of Log Value by State with variation of types
+
+```{r}
+data_to_plot3 <- strawberry_survey[!is.na(strawberry_survey$Value), ]
+ggplot(data_to_plot3, aes(x=State, y=log1p(Value), color=Type)) + 
+    geom_point() + 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Scatter Plot of Log Value by State, Colored by Type", y = "Log(Value + 1)")
+
+
+```
+
+-   **Distribution Across States**: You can see how the **`Value`** is distributed across different states. States with a higher density of points indicate more observations in the dataset from that state.
+
+-   **Variation by Type**: The different colors allow you to see if certain types have consistently higher or lower values across states.
+
+-   **Outliers**: Any points that lie far from the general cluster of points for a state might indicate outliers or unique observations.
+
+-   **State Comparison**: You can compare states to see which ones have higher or lower values on average and how much variability there is within each state.
