@@ -1,0 +1,118 @@
+---
+title: "eda report"
+format: html
+editor: visual
+author: Huaijin Xin
+date: 2023 Oct 23
+---
+
+## Data Source
+
+The data set for this assignment has been selected from: \[USDA_NASS\](https://quickstats.nass.usda.gov) \<br\> The data have been stored on NASS here: \[USDA_NASS_strawb_2023SEP19\](https://quickstats.nass.usda.gov/results/45FBC825-B104-38E2-9802-839F5F3C7036)
+
+## Data Cleaning
+
+Here is the view of raw data:
+
+```{r}
+#| label: read data - glimpse 
+#| warning: false
+#| message: false
+#| echo: false
+library(knitr)  
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+strawberry <- read_csv("strwb_oct4.csv", col_names = TRUE)
+glimpse(strawberry)
+
+```
+
+Split the data by the column Program: Census and Survey and clean them seperately. And we first check for Census dataframe: splite the column 'Data Item' into reasonable columns, and clean the value of column 'Value' and 'CV(%)'. For cleaning the number value, we delete all the commas and make every string value like "(D)" into NA.
+
+```{r}
+#| echo: false
+strawberry_census <- strawberry |> filter(Program == "CENSUS")
+ 
+strawberry_survey <- strawberry |> filter(Program == "SURVEY")
+census_split1 <- str_split_fixed(strawberry_census$`Data Item`, " - ", 2)
+census_split2 <- str_split_fixed(census_split1[, 1], ", ", 2)
+strawberry_census$Product <- census_split2[, 1]
+strawberry_census$Type <- ifelse(is.na(census_split2[, 2]), "", census_split2[, 2])
+strawberry_census$Metric <- census_split1[, 2]
+strawberry_census <- strawberry_census %>% select(-`Data Item`)
+strawberry_census <- strawberry_census %>% 
+  select_if(~ n_distinct(.) != 1)
+strawberry_census$Type <- strawberry_census$Type |> str_replace( "ORGANIC", "")
+strawberry_census$Type <- strawberry_census$Type |> str_replace( ",", "")
+vals<-strawberry_census$Value
+vals<-gsub(",","",vals)
+vals<-gsub("(D)",NA,vals)
+vals<-as.numeric(vals)
+strawberry_census$Value <- vals
+val2<-strawberry_census$`CV (%)`
+val2<-gsub("(D)",NA,val2)
+val2<-gsub("(H)",NA,val2)
+strawberry_census$`CV (%)` <- val2
+strawberry_census <- strawberry_census |>
+  separate_wider_delim(  cols = Metric,
+                         delim = ", MEASURED IN",
+                         names = c("Condition",
+                                 "Metric"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+strawberry_census$Condition <- strawberry_census$Condition |> str_replace( "OPERATIONS WITH ", "")
+strawberry_census$Metric[is.na(strawberry_census$Metric)] <- ""
+
+glimpse(strawberry_census)
+```
+
+then we check for Survey dataframe, clean it with the same way.
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false
+
+survey_split <- str_split_fixed(strawberry_survey$`Data Item`, " - ", 2)
+strawberry_survey$Product <- survey_split[, 1]
+strawberry_survey$Metric <- survey_split[, 2]
+strawberry_survey$Product <- strawberry_survey$Product |> str_replace( "STRAWBERRIES", "")
+strawberry_survey$Product <- strawberry_survey$Product |> str_replace( ",", "")
+strawberry_survey <- strawberry_survey |>
+  separate_wider_delim(  cols = Metric,
+                         delim = ", MEASURED IN",
+                         names = c("Type",
+                                 "Metric"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+strawberry_survey <- strawberry_survey %>% select(-`Data Item`)
+vals<-strawberry_survey$Value
+vals<-gsub(",","",vals)
+vals<-gsub("(D)",NA,vals)
+vals<-as.numeric(vals)
+strawberry_survey$`Value` <- vals
+strawberry_survey <- strawberry_survey %>% select(-`CV (%)`)
+glimpse(strawberry_survey)
+
+```
+
+## EDA
+
+We first do some EDA for CENSUS part:
+
+```{r}
+#| warning: false
+#| message: false
+#| #| echo: false
+
+ggplot(strawberry_census, aes(x = State, y = `CV (%)`, fill = Type)) + 
+  geom_boxplot() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Distribution of CV (%) by State")
+
+
+
+```
