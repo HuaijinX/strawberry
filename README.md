@@ -1,3 +1,6 @@
-# October 4 coding excercise
+# October 23th Strawberry EDA assignment
 
-My group members are:
+the code is in the file:
+eda report.qmd
+and the final work is in the file:
+eda report.pdf
